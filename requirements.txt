@@ -1,0 +1,11 @@
+streamlit>=1.40
+streamlit-echarts>=0.4.0
+sqlalchemy>=2.0
+psycopg[binary]>=3.2
+python-dotenv>=1.0
+pandas>=2.2
+
+# Biblioteca pessoal de gráficos/utilitários (fonte única dos gráficos ECharts).
+# No deploy (Streamlit Cloud) instala direto do GitHub; localmente use:
+#   pip install -e <caminho_local_do_baltazar>
+baltazar @ git+https://github.com/Diogohenrique1334/baltazar.git
