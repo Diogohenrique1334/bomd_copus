@@ -15,6 +15,7 @@ from src.db.models import Base
 # Novas colunas adicionadas após o schema original — aplicadas com ADD COLUMN IF NOT EXISTS
 _NOVAS_COLUNAS = [
     ("jogos", "casa", "BOOLEAN"),
+    ("jogadores", "data_nascimento", "DATE"),
 ]
 
 

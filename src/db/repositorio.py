@@ -11,7 +11,15 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.db.models import Adversario, Avaliacao, Campo, Gol, Jogador, Jogo
+from src.db.models import (
+    Adversario,
+    Avaliacao,
+    Campo,
+    Escalacao,
+    Gol,
+    Jogador,
+    Jogo,
+)
 
 
 # ----------------------------- Jogadores -----------------------------
@@ -37,9 +45,11 @@ def criar_jogador(
     rg: Optional[str] = None,
     celular: Optional[str] = None,
     posicao: Optional[str] = None,
+    data_nascimento: Optional[date] = None,
 ) -> Jogador:
     jogador = Jogador(
-        nome=nome, apelido=apelido, rg=rg, celular=celular, posicao=posicao
+        nome=nome, apelido=apelido, rg=rg, celular=celular, posicao=posicao,
+        data_nascimento=data_nascimento,
     )
     session.add(jogador)
     session.flush()
@@ -130,3 +140,27 @@ def adicionar_avaliacao(session: Session, avaliacao: Avaliacao) -> None:
 # ------------------------------- Gols --------------------------------
 def adicionar_gol(session: Session, gol: Gol) -> None:
     session.add(gol)
+
+
+# ----------------------------- Escalações ----------------------------
+def listar_escalacao(
+    session: Session, jogo_id: int, momento: str
+) -> list[Escalacao]:
+    return list(
+        session.scalars(
+            select(Escalacao)
+            .where(Escalacao.jogo_id == jogo_id, Escalacao.momento == momento)
+            .order_by(Escalacao.ordem)
+        )
+    )
+
+
+def remover_escalacao(session: Session, jogo_id: int, momento: str) -> None:
+    """Apaga todas as linhas da escalação de um (jogo, momento)."""
+    for esc in listar_escalacao(session, jogo_id, momento):
+        session.delete(esc)
+    session.flush()
+
+
+def adicionar_escalacao_slot(session: Session, escalacao: Escalacao) -> None:
+    session.add(escalacao)

@@ -28,6 +28,10 @@ _RES_SQL = """CASE
     ELSE 'Derrota'
 END"""
 
+# Nome de exibição do atleta no dashboard: apelido quando houver, senão o nome.
+# Assume o alias `p` para a tabela jogadores nas queries.
+_NOME_EXIB = "COALESCE(NULLIF(p.apelido, ''), p.nome)"
+
 
 def _ler_sql(query: str, params: Optional[dict] = None) -> pd.DataFrame:
     with get_engine().connect() as conn:
@@ -272,14 +276,14 @@ def ranking_notas(filtros: Optional[Filtros] = None) -> pd.DataFrame:
     fc, fp = f.clausula_jogos("j")
     pc, pp = f.clausula_posicao("p")
     return _ler_sql(f"""
-        SELECT p.nome AS jogador,
+        SELECT {_NOME_EXIB} AS jogador,
                ROUND(AVG(a.nota)::numeric, 2) AS nota_media,
                COUNT(a.nota) AS votos
         FROM avaliacoes a
         JOIN jogadores p ON p.id = a.jogador_id
         JOIN jogos j ON j.id = a.jogo_id
         WHERE a.jogou = TRUE {fc} {pc}
-        GROUP BY p.nome
+        GROUP BY {_NOME_EXIB}
         HAVING COUNT(a.nota) > 0
         ORDER BY nota_media DESC
     """, {**fp, **pp})
@@ -311,7 +315,7 @@ def evolucao_jogador(nome: str, filtros: Optional[Filtros] = None) -> pd.DataFra
         FROM avaliacoes a
         JOIN jogos j ON j.id = a.jogo_id
         JOIN jogadores p ON p.id = a.jogador_id
-        WHERE p.nome = :nome AND a.jogou = TRUE {fc}
+        WHERE {_NOME_EXIB} = :nome AND a.jogou = TRUE {fc}
         GROUP BY j.data
         ORDER BY j.data
     """, {**fp, "nome": nome})
@@ -337,11 +341,11 @@ def ranking_melhor_em_campo(filtros: Optional[Filtros] = None) -> pd.DataFrame:
                    RANK() OVER (PARTITION BY jogo_id ORDER BY media DESC) AS posicao
             FROM nota_jogo
         )
-        SELECT p.nome AS jogador, COUNT(*) AS vezes
+        SELECT {_NOME_EXIB} AS jogador, COUNT(*) AS vezes
         FROM ranqueado r
         JOIN jogadores p ON p.id = r.jogador_id
         WHERE r.posicao = 1
-        GROUP BY p.nome
+        GROUP BY {_NOME_EXIB}
         ORDER BY vezes DESC
     """, fp)
 
@@ -462,12 +466,12 @@ def artilharia(filtros: Optional[Filtros] = None) -> pd.DataFrame:
     fc, fp = f.clausula_jogos("j")
     pc, pp = f.clausula_posicao("p")
     return _ler_sql(f"""
-        SELECT p.nome AS jogador, COUNT(*) AS gols
+        SELECT {_NOME_EXIB} AS jogador, COUNT(*) AS gols
         FROM gols g
         JOIN jogadores p ON p.id = g.jogador_id
         JOIN jogos j ON j.id = g.jogo_id
         WHERE 1=1 {fc} {pc}
-        GROUP BY p.nome
+        GROUP BY {_NOME_EXIB}
         ORDER BY gols DESC
     """, {**fp, **pp})
 
@@ -478,12 +482,12 @@ def assistencias(filtros: Optional[Filtros] = None) -> pd.DataFrame:
     fc, fp = f.clausula_jogos("j")
     pc, pp = f.clausula_posicao("p")
     return _ler_sql(f"""
-        SELECT p.nome AS jogador, COUNT(*) AS assistencias
+        SELECT {_NOME_EXIB} AS jogador, COUNT(*) AS assistencias
         FROM gols g
         JOIN jogadores p ON p.id = g.assistente_id
         JOIN jogos j ON j.id = g.jogo_id
         WHERE g.assistente_id IS NOT NULL {fc} {pc}
-        GROUP BY p.nome
+        GROUP BY {_NOME_EXIB}
         ORDER BY assistencias DESC
     """, {**fp, **pp})
 
@@ -571,7 +575,7 @@ def notas_por_jogo_jogador(filtros: Optional[Filtros] = None,
     fc, fp = _f(filtros).clausula_jogos("j")
     filtro_ativo = "AND COALESCE(p.ativo, TRUE) = TRUE" if apenas_ativos else ""
     return _ler_sql(f"""
-        SELECT p.nome AS jogador,
+        SELECT {_NOME_EXIB} AS jogador,
                p.posicao AS posicao,
                j.data AS data,
                AVG(a.nota) AS nota_jogo
@@ -580,6 +584,6 @@ def notas_por_jogo_jogador(filtros: Optional[Filtros] = None,
         JOIN jogadores p ON p.id = a.jogador_id
         WHERE a.jogou = TRUE AND a.nota IS NOT NULL AND p.posicao IS NOT NULL
               {filtro_ativo} {fc}
-        GROUP BY p.nome, p.posicao, j.data
-        ORDER BY p.nome, j.data
+        GROUP BY {_NOME_EXIB}, p.posicao, j.data
+        ORDER BY {_NOME_EXIB}, j.data
     """, fp)

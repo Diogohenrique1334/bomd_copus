@@ -116,9 +116,11 @@ def render_jogos() -> None:
         if df_cf.empty:
             st.caption("Sem dados de casa/fora para o filtro.")
         else:
-            for _, row in df_cf.iterrows():
-                st.metric(row["local"], f"{row['aproveitamento_pct']}%",
-                          help=f"{int(row['jogos'])} jogos")
+            tema.kpis([
+                (f"{row['local']} · {int(row['jogos'])} jogos",
+                 f"{row['aproveitamento_pct']}%")
+                for _, row in df_cf.iterrows()
+            ])
 
     with col_g3:
         tema.card_titulo("Visão Geral dos Jogos")

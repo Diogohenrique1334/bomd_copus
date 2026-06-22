@@ -44,6 +44,7 @@ class Jogador(Base):
     rg: Mapped[Optional[str]] = mapped_column(String(20))
     celular: Mapped[Optional[str]] = mapped_column(String(20))
     posicao: Mapped[Optional[str]] = mapped_column(String(40))
+    data_nascimento: Mapped[Optional[date]] = mapped_column(Date)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     avaliacoes: Mapped[List["Avaliacao"]] = relationship(back_populates="jogador")
@@ -95,6 +96,9 @@ class Jogo(Base):
     gols: Mapped[List["Gol"]] = relationship(
         back_populates="jogo", cascade="all, delete-orphan"
     )
+    escalacoes: Mapped[List["Escalacao"]] = relationship(
+        back_populates="jogo", cascade="all, delete-orphan"
+    )
 
 
 class Avaliacao(Base):
@@ -133,3 +137,29 @@ class Gol(Base):
         back_populates="gols", foreign_keys=[jogador_id]
     )
     assistente: Mapped[Optional["Jogador"]] = relationship(foreign_keys=[assistente_id])
+
+
+class Escalacao(Base):
+    """Um slot da escalação de um jogo (formato longo: 1 linha por posição).
+
+    `momento` distingue os dois registros do mesmo jogo: 'inicial' (os 11 que
+    começaram) e 'final' (os 11 que terminaram). Reenviar uma escalação para o
+    mesmo (jogo, momento) substitui as linhas anteriores.
+    """
+    __tablename__ = "escalacoes"
+    __table_args__ = (
+        UniqueConstraint("jogo_id", "momento", "slot", name="uq_escalacao_slot"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    jogo_id: Mapped[int] = mapped_column(ForeignKey("jogos.id"), nullable=False)
+    momento: Mapped[str] = mapped_column(String(10), nullable=False)  # inicial / final
+    formacao: Mapped[Optional[str]] = mapped_column(String(20))       # ex.: 4-3-3
+    slot: Mapped[str] = mapped_column(String(10), nullable=False)     # GOL, ZAG, ATA...
+    jogador_id: Mapped[int] = mapped_column(ForeignKey("jogadores.id"), nullable=False)
+    x: Mapped[Optional[int]] = mapped_column(Integer)
+    y: Mapped[Optional[int]] = mapped_column(Integer)
+    ordem: Mapped[Optional[int]] = mapped_column(Integer)
+
+    jogo: Mapped["Jogo"] = relationship(back_populates="escalacoes")
+    jogador: Mapped["Jogador"] = relationship()

@@ -17,7 +17,7 @@ COR_BDC_CLARO = "#E8CC6A"
 _CSS = """
 <style>
 /* ===== BDC DASHBOARD ===== */
-.block-container { max-width: 1280px; padding-top: 1.6rem; }
+.block-container { max-width: 1280px; padding-top: 3.5rem; }
 
 /* Título principal */
 .bdc-hero {

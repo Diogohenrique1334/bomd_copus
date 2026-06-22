@@ -50,14 +50,20 @@ class JogoResumo:
         return f"{self.data:%d/%m/%Y} — {self.adversario or 'sem adversário'} ({self.tipo or '—'})"
 
 
-def listar_jogos_resumo() -> list[JogoResumo]:
-    """Lista os jogos (mais recentes primeiro) como DTOs prontos para seleção."""
+def listar_jogos_resumo(limite: Optional[int] = None) -> list[JogoResumo]:
+    """Lista os jogos (mais recentes primeiro) como DTOs prontos para seleção.
+
+    `limite`: se informado, devolve apenas os N jogos mais recentes.
+    """
     with SessionLocal() as session:
-        jogos = session.scalars(
+        stmt = (
             select(Jogo)
             .options(joinedload(Jogo.adversario), joinedload(Jogo.campo))
             .order_by(Jogo.data.desc())
-        ).all()
+        )
+        if limite is not None:
+            stmt = stmt.limit(limite)
+        jogos = session.scalars(stmt).all()
         return [
             JogoResumo(
                 id=j.id,

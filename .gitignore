@@ -10,6 +10,13 @@ __pycache__/
 venv/
 env/
 
+# Instruções locais do Claude Code (não versionar)
+CLAUDE.md
+
+# Dev / screenshots (Playwright)
+_shots/
+scripts/_shot*.py
+
 # IDE / SO
 .vscode/
 .idea/

@@ -12,7 +12,7 @@ st.title("⭐ Avaliar jogadores")
 if not exigir_senha():
     st.stop()
 
-jogos = listar_jogos_resumo()
+jogos = listar_jogos_resumo(limite=2)
 jogadores = cadastros.listar_atletas(apenas_ativos=True)
 
 if not jogos:
@@ -21,7 +21,7 @@ if not jogos:
 
 votante = st.text_input("Quem está votando?")
 jogo = st.selectbox(
-    "Jogo",
+    "Jogo (apenas os 2 mais recentes)",
     jogos,
     format_func=lambda j: j.rotulo(),
 )

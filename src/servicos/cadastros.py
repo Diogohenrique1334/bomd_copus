@@ -5,6 +5,7 @@ recebem o id e os novos valores e atualizam apenas os campos informados.
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional
 
 from src.db import repositorio as repo
@@ -27,6 +28,7 @@ def criar_atleta(
     rg: Optional[str] = None,
     celular: Optional[str] = None,
     posicao: Optional[str] = None,
+    data_nascimento: Optional[date] = None,
 ) -> int:
     nome = nome.strip()
     if not nome:
@@ -35,7 +37,8 @@ def criar_atleta(
         if repo.obter_jogador_por_nome(session, nome):
             raise ValueError(f"Já existe um atleta chamado '{nome}'.")
         atleta = repo.criar_jogador(
-            session, nome=nome, apelido=apelido, rg=rg, celular=celular, posicao=posicao
+            session, nome=nome, apelido=apelido, rg=rg, celular=celular,
+            posicao=posicao, data_nascimento=data_nascimento,
         )
         session.commit()
         return atleta.id
@@ -50,6 +53,7 @@ def editar_atleta(
     celular: Optional[str],
     posicao: Optional[str],
     ativo: bool,
+    data_nascimento: Optional[date] = None,
 ) -> None:
     with SessionLocal() as session:
         atleta = repo.obter_jogador(session, atleta_id)
@@ -60,6 +64,7 @@ def editar_atleta(
         atleta.rg = rg
         atleta.celular = celular
         atleta.posicao = posicao
+        atleta.data_nascimento = data_nascimento
         atleta.ativo = ativo
         session.commit()
 
