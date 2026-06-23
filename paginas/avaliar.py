@@ -4,7 +4,7 @@ from __future__ import annotations
 import streamlit as st
 
 from src.auth.senha import exigir_senha
-from src.servicos import avaliacoes, cadastros
+from src.servicos import avaliacoes, cadastros, escalacao_jogo
 from src.servicos.jogos import listar_jogos_resumo
 
 st.title("⭐ Avaliar jogadores")
@@ -13,8 +13,6 @@ if not exigir_senha():
     st.stop()
 
 jogos = listar_jogos_resumo(limite=2)
-jogadores = cadastros.listar_atletas(apenas_ativos=True)
-
 if not jogos:
     st.warning("Cadastre um jogo antes de avaliar (página **Registrar jogo**).")
     st.stop()
@@ -26,7 +24,17 @@ jogo = st.selectbox(
     format_func=lambda j: j.rotulo(),
 )
 
-st.caption("Notas de 5 a 10 (passo 0,5). Desmarque quem não jogou.")
+# Avalia só quem esteve na escalação (inicial+final) do jogo; sem escalação salva,
+# cai para todos os atletas ativos.
+ativos = cadastros.listar_atletas(apenas_ativos=True)
+escalados = escalacao_jogo.atletas_do_jogo(jogo.id)
+if escalados:
+    jogadores = [a for a in ativos if a.id in escalados]
+    st.caption(f"Notas de 0 a 10 (passo 0,5). {len(jogadores)} atletas da escalação deste jogo.")
+else:
+    jogadores = ativos
+    st.caption("Notas de 0 a 10 (passo 0,5). Sem escalação salva — listando todos os "
+               "atletas ativos. Desmarque quem não jogou.")
 
 with st.form("form_avaliacoes"):
     notas: dict[int, float | None] = {}
@@ -36,7 +44,7 @@ with st.form("form_avaliacoes"):
         jogou = c_jogou.checkbox("Jogou", value=True, key=f"jogou_{jogador.id}")
         nota = c_nota.slider(
             "Nota",
-            min_value=5.0,
+            min_value=0.0,
             max_value=10.0,
             step=0.5,
             value=7.0,

@@ -63,6 +63,12 @@ ctx = f"{jogo.id}:{momento}"
 if st.session_state.get("esc_ctx") != ctx:
     st.session_state["esc_ctx"] = ctx
     salvo = escalacao_jogo.obter(jogo.id, momento)
+    # 11 finais ainda não salvos herdam os 11 iniciais (só editar as mudanças).
+    herdou = False
+    if not salvo and momento == "final":
+        salvo = escalacao_jogo.obter(jogo.id, "inicial")
+        herdou = bool(salvo)
+    st.session_state["esc_herdou_inicial"] = herdou
     formacao_inicial = (salvo or {}).get("formacao") or list(FORMACOES)[0]
     seed = (salvo or {}).get("atribuicoes", {})
 
@@ -78,6 +84,9 @@ slots = escalacao_jogo.slots_da_formacao(formacao)
 
 # ── Slots agrupados por linha (ataque em cima) ───────────────────────────────
 tema.secao(f"Escalação — {momento_label}")
+
+if st.session_state.get("esc_herdou_inicial"):
+    st.info("Herdado dos **11 iniciais** — ajuste só as mudanças (substituições) e salve.")
 
 linhas: dict[int, list] = {}
 for slot_key, s in slots:

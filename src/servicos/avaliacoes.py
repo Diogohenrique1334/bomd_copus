@@ -5,7 +5,7 @@ from src.db import repositorio as repo
 from src.db.engine import SessionLocal
 from src.db.models import Avaliacao
 
-NOTA_MINIMA = 5.0
+NOTA_MINIMA = 0.0
 NOTA_MAXIMA = 10.0
 
 

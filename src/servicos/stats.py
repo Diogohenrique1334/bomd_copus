@@ -362,7 +362,9 @@ def resumo_gols(filtros: Optional[Filtros] = None) -> dict:
             (SELECT COUNT(*) FROM gols g
              JOIN jogos j2 ON j2.id = g.jogo_id WHERE 1=1 {fc_g}) AS total_gols,
             (SELECT COUNT(DISTINCT g.jogador_id) FROM gols g
-             JOIN jogos j2 ON j2.id = g.jogo_id WHERE 1=1 {fc_g}) AS atletas,
+             JOIN jogos j2 ON j2.id = g.jogo_id
+             JOIN jogadores p ON p.id = g.jogador_id
+             WHERE COALESCE(p.eh_atleta, TRUE) {fc_g}) AS atletas,
             (SELECT COUNT(*) FROM gols g
              JOIN jogos j2 ON j2.id = g.jogo_id
              WHERE g.assistente_id IS NOT NULL {fc_g}) AS total_assists,
@@ -470,7 +472,7 @@ def artilharia(filtros: Optional[Filtros] = None) -> pd.DataFrame:
         FROM gols g
         JOIN jogadores p ON p.id = g.jogador_id
         JOIN jogos j ON j.id = g.jogo_id
-        WHERE 1=1 {fc} {pc}
+        WHERE COALESCE(p.eh_atleta, TRUE) {fc} {pc}
         GROUP BY {_NOME_EXIB}
         ORDER BY gols DESC
     """, {**fp, **pp})
@@ -486,7 +488,7 @@ def assistencias(filtros: Optional[Filtros] = None) -> pd.DataFrame:
         FROM gols g
         JOIN jogadores p ON p.id = g.assistente_id
         JOIN jogos j ON j.id = g.jogo_id
-        WHERE g.assistente_id IS NOT NULL {fc} {pc}
+        WHERE g.assistente_id IS NOT NULL AND COALESCE(p.eh_atleta, TRUE) {fc} {pc}
         GROUP BY {_NOME_EXIB}
         ORDER BY assistencias DESC
     """, {**fp, **pp})

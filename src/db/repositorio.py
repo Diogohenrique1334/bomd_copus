@@ -23,11 +23,26 @@ from src.db.models import (
 
 
 # ----------------------------- Jogadores -----------------------------
-def listar_jogadores(session: Session, apenas_ativos: bool = True) -> list[Jogador]:
+def listar_jogadores(
+    session: Session, apenas_ativos: bool = True, apenas_atletas: bool = True
+) -> list[Jogador]:
     stmt = select(Jogador).order_by(Jogador.nome)
     if apenas_ativos:
         stmt = stmt.where(Jogador.ativo.is_(True))
+    if apenas_atletas:
+        stmt = stmt.where(Jogador.eh_atleta.is_(True))
     return list(session.scalars(stmt))
+
+
+def listar_auxiliares(session: Session) -> list[Jogador]:
+    """Entradas não-atleta (ex.: 'Gol Contra'), usadas só p/ registrar gols."""
+    return list(
+        session.scalars(
+            select(Jogador)
+            .where(Jogador.eh_atleta.is_(False))
+            .order_by(Jogador.nome)
+        )
+    )
 
 
 def obter_jogador(session: Session, jogador_id: int) -> Optional[Jogador]:
@@ -106,6 +121,20 @@ def listar_jogos(session: Session) -> list[Jogo]:
     return list(session.scalars(select(Jogo).order_by(Jogo.data.desc())))
 
 
+def obter_jogo(session: Session, jogo_id: int) -> Optional[Jogo]:
+    return session.get(Jogo, jogo_id)
+
+
+def existe_jogo_na_data(
+    session: Session, data_jogo: date, excluir_id: Optional[int] = None
+) -> bool:
+    """True se já há jogo nessa data (ignorando `excluir_id`, útil na edição)."""
+    stmt = select(Jogo.id).where(Jogo.data == data_jogo)
+    if excluir_id is not None:
+        stmt = stmt.where(Jogo.id != excluir_id)
+    return session.scalar(stmt) is not None
+
+
 def criar_jogo(
     session: Session,
     data_jogo: date,
@@ -142,6 +171,28 @@ def adicionar_gol(session: Session, gol: Gol) -> None:
     session.add(gol)
 
 
+def listar_gols(session: Session, jogo_id: int) -> list[Gol]:
+    return list(
+        session.scalars(
+            select(Gol).where(Gol.jogo_id == jogo_id).order_by(Gol.ordem)
+        )
+    )
+
+
+def remover_gols(session: Session, jogo_id: int) -> None:
+    """Apaga todos os gols de um jogo (usado ao reescrever os gols na edição)."""
+    for gol in listar_gols(session, jogo_id):
+        session.delete(gol)
+    session.flush()
+
+
+def excluir_jogo(session: Session, jogo_id: int) -> None:
+    """Remove o jogo; o cascade apaga gols, avaliações e escalações."""
+    jogo = session.get(Jogo, jogo_id)
+    if jogo:
+        session.delete(jogo)
+
+
 # ----------------------------- Escalações ----------------------------
 def listar_escalacao(
     session: Session, jogo_id: int, momento: str
@@ -164,3 +215,14 @@ def remover_escalacao(session: Session, jogo_id: int, momento: str) -> None:
 
 def adicionar_escalacao_slot(session: Session, escalacao: Escalacao) -> None:
     session.add(escalacao)
+
+
+def jogadores_escalados(session: Session, jogo_id: int) -> list[int]:
+    """IDs distintos de atletas escalados no jogo (qualquer momento)."""
+    return list(
+        session.scalars(
+            select(Escalacao.jogador_id)
+            .where(Escalacao.jogo_id == jogo_id)
+            .distinct()
+        )
+    )

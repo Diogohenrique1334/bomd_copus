@@ -16,6 +16,7 @@ from src.db.models import Base
 _NOVAS_COLUNAS = [
     ("jogos", "casa", "BOOLEAN"),
     ("jogadores", "data_nascimento", "DATE"),
+    ("jogadores", "eh_atleta", "BOOLEAN DEFAULT TRUE"),
 ]
 
 

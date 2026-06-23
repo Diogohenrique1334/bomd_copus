@@ -46,6 +46,9 @@ class Jogador(Base):
     posicao: Mapped[Optional[str]] = mapped_column(String(40))
     data_nascimento: Mapped[Optional[date]] = mapped_column(Date)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # False para entradas auxiliares (ex.: "Gol Contra", "Gol sem assistência"),
+    # usadas só p/ registrar gols/assistências — não são atletas de verdade.
+    eh_atleta: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     avaliacoes: Mapped[List["Avaliacao"]] = relationship(back_populates="jogador")
     gols: Mapped[List["Gol"]] = relationship(

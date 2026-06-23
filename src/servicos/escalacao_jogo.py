@@ -89,6 +89,12 @@ def salvar(
         return gravados
 
 
+def atletas_do_jogo(jogo_id: int) -> set:
+    """IDs dos atletas que estiveram em alguma escalação (inicial ou final) do jogo."""
+    with SessionLocal() as session:
+        return set(repo.jogadores_escalados(session, jogo_id))
+
+
 def obter(jogo_id: int, momento: str) -> Optional[dict]:
     """Escalação salva de (jogo, momento).
 

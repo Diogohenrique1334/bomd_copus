@@ -212,7 +212,7 @@ def render_avaliacoes() -> None:
         df_res = stats.nota_media_por_resultado(f)
         if not df_res.empty:
             g.barras_resultado_h(df_res, "resultado", "nota_media",
-                                 min_eixo=5, max_eixo=8, key="a_nota_resultado")
+                                 min_eixo=0, max_eixo=10, key="a_nota_resultado")
 
     with b2:
         tema.card_titulo("Nota Média por Tipo de Jogo")
@@ -283,7 +283,7 @@ def render_avaliacoes() -> None:
         tema.card_titulo("Nota Média por Mês")
         df_nmes = stats.nota_media_por_mes(f)
         if not df_nmes.empty:
-            g.linha_com_rotulos(df_nmes, "mes", "nota_media", min_y=5, max_y=8,
+            g.linha_com_rotulos(df_nmes, "mes", "nota_media", min_y=0, max_y=10,
                                 key="a_nota_mes", tamanho="280px")
 
     st.divider()
@@ -306,7 +306,8 @@ def render_avaliacoes() -> None:
                                    key="sel_jogador_aval")
         df_evo = stats.evolucao_jogador(jogador_sel, f)
         if not df_evo.empty:
-            g.linha_temporal(df_evo, "data", "nota_media", jogador_sel, key="a_evolucao")
+            g.linha_temporal(df_evo, "data", "nota_media", jogador_sel,
+                             min_y=0, max_y=10, key="a_evolucao")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

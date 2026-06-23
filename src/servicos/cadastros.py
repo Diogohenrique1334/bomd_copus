@@ -17,8 +17,17 @@ POSICOES = ["Goleiro", "Zagueiro", "Lateral", "Volante", "Meio-Campo", "Atacante
 
 # ------------------------------ Atletas ------------------------------
 def listar_atletas(apenas_ativos: bool = False) -> list[Jogador]:
+    """Lista atletas de verdade (exclui auxiliares como 'Gol Contra')."""
     with SessionLocal() as session:
-        return repo.listar_jogadores(session, apenas_ativos=apenas_ativos)
+        return repo.listar_jogadores(
+            session, apenas_ativos=apenas_ativos, apenas_atletas=True
+        )
+
+
+def listar_auxiliares() -> list[Jogador]:
+    """Entradas auxiliares (não-atletas) p/ usar só no registro de gols."""
+    with SessionLocal() as session:
+        return repo.listar_auxiliares(session)
 
 
 def criar_atleta(
