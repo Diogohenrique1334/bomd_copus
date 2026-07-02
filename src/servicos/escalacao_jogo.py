@@ -95,6 +95,20 @@ def atletas_do_jogo(jogo_id: int) -> set:
         return set(repo.jogadores_escalados(session, jogo_id))
 
 
+def definir_capitao(jogo_id: int, jogador_id: Optional[int]) -> None:
+    """Define (ou limpa, com None) o capitão do jogo."""
+    with SessionLocal() as session:
+        repo.definir_capitao(session, jogo_id, jogador_id)
+        session.commit()
+
+
+def obter_capitao(jogo_id: int) -> Optional[int]:
+    """ID do capitão do jogo (None se não definido)."""
+    with SessionLocal() as session:
+        jogo = repo.obter_jogo(session, jogo_id)
+        return jogo.capitao_id if jogo else None
+
+
 def obter(jogo_id: int, momento: str) -> Optional[dict]:
     """Escalação salva de (jogo, momento).
 

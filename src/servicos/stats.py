@@ -321,6 +321,46 @@ def evolucao_jogador(nome: str, filtros: Optional[Filtros] = None) -> pd.DataFra
     """, {**fp, "nome": nome})
 
 
+def jogos_avaliados() -> pd.DataFrame:
+    """Jogos que têm avaliações, do mais recente ao mais antigo.
+
+    Colunas: id, data, adversario, gols_bdc, gols_adversario. Alimenta o seletor
+    de jogo da seção "Melhor em Campo & Ranking do Jogo".
+    """
+    return _ler_sql("""
+        SELECT j.id, j.data,
+               COALESCE(adv.nome, '?') AS adversario,
+               j.gols_bdc, j.gols_adversario
+        FROM jogos j
+        LEFT JOIN adversarios adv ON adv.id = j.adversario_id
+        WHERE EXISTS (
+            SELECT 1 FROM avaliacoes a
+            WHERE a.jogo_id = j.id AND a.jogou = TRUE AND a.nota IS NOT NULL
+        )
+        ORDER BY j.data DESC
+    """)
+
+
+def notas_do_jogo(jogo_id: int) -> pd.DataFrame:
+    """Ranking de notas dos jogadores em um jogo específico.
+
+    Colunas: jogador_id, jogador (apelido), nota (média dos votos), votos —
+    ordenado da maior nota para a menor. A 1ª linha é o "Melhor em Campo".
+    """
+    return _ler_sql(f"""
+        SELECT p.id AS jogador_id,
+               {_NOME_EXIB} AS jogador,
+               ROUND(AVG(a.nota)::numeric, 2) AS nota,
+               COUNT(a.nota) AS votos
+        FROM avaliacoes a
+        JOIN jogadores p ON p.id = a.jogador_id
+        WHERE a.jogo_id = :jogo_id AND a.jogou = TRUE AND a.nota IS NOT NULL
+              AND COALESCE(p.eh_atleta, TRUE)
+        GROUP BY p.id, {_NOME_EXIB}
+        ORDER BY nota DESC
+    """, {"jogo_id": jogo_id})
+
+
 def ranking_melhor_em_campo(filtros: Optional[Filtros] = None) -> pd.DataFrame:
     """Quantas vezes cada jogador foi o melhor em campo (maior nota do jogo).
 

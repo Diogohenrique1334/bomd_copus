@@ -4,6 +4,7 @@ sqlalchemy>=2.0
 psycopg[binary]>=3.2
 python-dotenv>=1.0
 pandas>=2.2
+pillow>=10.1
 
 # Biblioteca pessoal de gráficos/utilitários (fonte única dos gráficos ECharts).
 # No deploy (Streamlit Cloud) instala direto do GitHub; localmente use:

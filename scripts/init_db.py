@@ -17,6 +17,11 @@ _NOVAS_COLUNAS = [
     ("jogos", "casa", "BOOLEAN"),
     ("jogadores", "data_nascimento", "DATE"),
     ("jogadores", "eh_atleta", "BOOLEAN DEFAULT TRUE"),
+    ("jogadores", "papel", "VARCHAR(20) DEFAULT 'Comum'"),
+    ("jogadores", "foto", "BYTEA"),
+    ("jogos", "capitao_id", "INTEGER"),
+    ("campos", "nota_qualidade", "DOUBLE PRECISION"),
+    ("campos", "nota_distancia", "DOUBLE PRECISION"),
 ]
 
 

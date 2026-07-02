@@ -13,6 +13,8 @@ from src.db.engine import SessionLocal
 from src.db.models import Adversario, Campo, Jogador
 
 POSICOES = ["Goleiro", "Zagueiro", "Lateral", "Volante", "Meio-Campo", "Atacante"]
+# Hierarquia no grupo. Só Diretor e Capitão votam nas avaliações.
+PAPEIS = ["Comum", "Diretor", "Capitao"]
 
 
 # ------------------------------ Atletas ------------------------------
@@ -30,6 +32,19 @@ def listar_auxiliares() -> list[Jogador]:
         return repo.listar_auxiliares(session)
 
 
+def listar_votantes() -> list[Jogador]:
+    """Atletas aptos a votar (Diretores e Capitães, inclusive inativos)."""
+    with SessionLocal() as session:
+        return repo.listar_votantes(session)
+
+
+def obter_foto(jogador_id: int) -> Optional[bytes]:
+    """Bytes da foto do atleta (None se não tiver)."""
+    with SessionLocal() as session:
+        jogador = repo.obter_jogador(session, jogador_id)
+        return jogador.foto if jogador else None
+
+
 def criar_atleta(
     *,
     nome: str,
@@ -38,6 +53,8 @@ def criar_atleta(
     celular: Optional[str] = None,
     posicao: Optional[str] = None,
     data_nascimento: Optional[date] = None,
+    papel: str = "Comum",
+    foto: Optional[bytes] = None,
 ) -> int:
     nome = nome.strip()
     if not nome:
@@ -48,6 +65,7 @@ def criar_atleta(
         atleta = repo.criar_jogador(
             session, nome=nome, apelido=apelido, rg=rg, celular=celular,
             posicao=posicao, data_nascimento=data_nascimento,
+            papel=papel, foto=foto,
         )
         session.commit()
         return atleta.id
@@ -63,7 +81,16 @@ def editar_atleta(
     posicao: Optional[str],
     ativo: bool,
     data_nascimento: Optional[date] = None,
+    papel: Optional[str] = None,
+    foto: Optional[bytes] = None,
+    atualizar_foto: bool = False,
 ) -> None:
+    """Atualiza um atleta.
+
+    A foto só é tocada quando ``atualizar_foto=True`` (assim editar sem subir
+    imagem nova preserva a foto atual). Passar ``atualizar_foto=True`` com
+    ``foto=None`` remove a foto.
+    """
     with SessionLocal() as session:
         atleta = repo.obter_jogador(session, atleta_id)
         if not atleta:
@@ -75,6 +102,10 @@ def editar_atleta(
         atleta.posicao = posicao
         atleta.data_nascimento = data_nascimento
         atleta.ativo = ativo
+        if papel is not None:
+            atleta.papel = papel
+        if atualizar_foto:
+            atleta.foto = foto
         session.commit()
 
 
@@ -112,23 +143,41 @@ def listar_campos() -> list[Campo]:
         return repo.listar_campos(session)
 
 
-def criar_campo(*, nome: str, cidade: Optional[str] = None) -> int:
+def criar_campo(
+    *,
+    nome: str,
+    cidade: Optional[str] = None,
+    nota_qualidade: Optional[float] = None,
+    nota_distancia: Optional[float] = None,
+) -> int:
     nome = nome.strip()
     if not nome:
         raise ValueError("Nome do campo é obrigatório.")
     with SessionLocal() as session:
         if repo.obter_campo_por_nome(session, nome, cidade):
             raise ValueError(f"Campo '{nome}' já cadastrado para esta cidade.")
-        campo = repo.criar_campo(session, nome=nome, cidade=cidade)
+        campo = repo.criar_campo(
+            session, nome=nome, cidade=cidade,
+            nota_qualidade=nota_qualidade, nota_distancia=nota_distancia,
+        )
         session.commit()
         return campo.id
 
 
-def editar_campo(campo_id: int, *, nome: str, cidade: Optional[str]) -> None:
+def editar_campo(
+    campo_id: int,
+    *,
+    nome: str,
+    cidade: Optional[str],
+    nota_qualidade: Optional[float] = None,
+    nota_distancia: Optional[float] = None,
+) -> None:
     with SessionLocal() as session:
         campo = repo.obter_campo(session, campo_id)
         if not campo:
             raise ValueError("Campo não encontrado.")
         campo.nome = nome.strip()
         campo.cidade = cidade
+        campo.nota_qualidade = nota_qualidade
+        campo.nota_distancia = nota_distancia
         session.commit()

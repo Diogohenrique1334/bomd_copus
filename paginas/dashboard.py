@@ -16,8 +16,10 @@ from typing import Optional
 import pandas as pd
 import streamlit as st
 
+from src.graficos import arte_instagram
 from src.graficos import echarts_bdc as g
 from src.graficos import tema
+from src.servicos import cadastros
 from src.servicos import escalacao
 from src.servicos import filtros as flt
 from src.servicos import stats
@@ -75,6 +77,64 @@ def barra_filtros(prefixo: str, com_posicao: bool = False) -> Filtros:
 
 def _aviso_sem_dados() -> None:
     st.warning("Nenhum jogo para os filtros selecionados. Ajuste o ano/mês/tipo.")
+
+
+def secao_melhor_e_ranking() -> None:
+    """Melhor em Campo + ranking de notas de um jogo (seletor, começa no último).
+
+    Independe dos filtros de ano/mês/tipo — é uma visão por partida.
+    """
+    df_jogos = stats.jogos_avaliados()
+    if df_jogos.empty:
+        return
+
+    tema.secao("🏆 Melhor em Campo & Ranking do Jogo")
+
+    rotulos = {
+        int(r["id"]): f"{r['data']:%d/%m/%Y} · {r['adversario']} "
+                      f"({int(r['gols_bdc'])}x{int(r['gols_adversario'])})"
+        for _, r in df_jogos.iterrows()
+    }
+    jogo_id = st.selectbox(
+        "Jogo", df_jogos["id"].astype(int).tolist(),
+        format_func=lambda i: rotulos.get(i, str(i)), key="mvp_jogo",
+    )
+
+    df_notas = stats.notas_do_jogo(int(jogo_id))
+    if df_notas.empty:
+        st.caption("Sem notas para este jogo.")
+        return
+
+    mvp = df_notas.iloc[0]
+    jogo_row = df_jogos[df_jogos["id"] == jogo_id].iloc[0]
+    nota_mvp = float(mvp["nota"])
+
+    col_dest, col_rank = st.columns([2, 3])
+
+    with col_dest:
+        tema.kpis([
+            (mvp["jogador"], f"{nota_mvp:.1f}".replace(".", ",")),
+            ("Placar", f"{int(jogo_row['gols_bdc'])} x {int(jogo_row['gols_adversario'])}"),
+        ], destaque=0)
+        foto = cadastros.obter_foto(int(mvp["jogador_id"]))
+        png = arte_instagram.gerar_arte_mvp(
+            apelido=mvp["jogador"], nota=nota_mvp, adversario=jogo_row["adversario"],
+            data=jogo_row["data"], foto_bytes=foto,
+        )
+        st.download_button(
+            "📸 Baixar arte do melhor em campo", data=png,
+            file_name=f"melhor_em_campo_{mvp['jogador']}.png",
+            mime="image/png", use_container_width=True,
+        )
+        if not foto:
+            st.caption("Sem foto — arte com as iniciais. Suba a foto em **Atletas**.")
+
+    with col_rank:
+        tema.card_titulo("Ranking de Notas do Jogo")
+        g.barras_horizontais(df_notas, "jogador", "nota", key="mvp_ranking",
+                             tamanho="320px")
+
+    st.divider()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -183,6 +243,7 @@ def render_jogos() -> None:
 # SEÇÃO — AVALIAÇÕES
 # ═══════════════════════════════════════════════════════════════════════════════
 def render_avaliacoes() -> None:
+    secao_melhor_e_ranking()
     f = barra_filtros("a", com_posicao=True)
     res = stats.resumo_completo(f)
     if not res or not res.get("jogos"):

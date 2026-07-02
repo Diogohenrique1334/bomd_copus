@@ -45,6 +45,24 @@ def listar_auxiliares(session: Session) -> list[Jogador]:
     )
 
 
+def listar_votantes(session: Session) -> list[Jogador]:
+    """Atletas aptos a votar nas avaliações: Diretores e Capitães.
+
+    Inclui inativos de propósito (um diretor/capitão afastado ainda vota) e
+    exclui as entradas auxiliares (eh_atleta=False).
+    """
+    return list(
+        session.scalars(
+            select(Jogador)
+            .where(
+                Jogador.eh_atleta.is_(True),
+                Jogador.papel.in_(("Diretor", "Capitao")),
+            )
+            .order_by(Jogador.nome)
+        )
+    )
+
+
 def obter_jogador(session: Session, jogador_id: int) -> Optional[Jogador]:
     return session.get(Jogador, jogador_id)
 
@@ -61,10 +79,12 @@ def criar_jogador(
     celular: Optional[str] = None,
     posicao: Optional[str] = None,
     data_nascimento: Optional[date] = None,
+    papel: str = "Comum",
+    foto: Optional[bytes] = None,
 ) -> Jogador:
     jogador = Jogador(
         nome=nome, apelido=apelido, rg=rg, celular=celular, posicao=posicao,
-        data_nascimento=data_nascimento,
+        data_nascimento=data_nascimento, papel=papel, foto=foto,
     )
     session.add(jogador)
     session.flush()
@@ -109,11 +129,46 @@ def obter_campo_por_nome(session: Session, nome: str, cidade: Optional[str] = No
     return session.scalar(stmt)
 
 
-def criar_campo(session: Session, nome: str, cidade: Optional[str] = None) -> Campo:
-    campo = Campo(nome=nome, cidade=cidade)
+def criar_campo(
+    session: Session,
+    nome: str,
+    cidade: Optional[str] = None,
+    nota_qualidade: Optional[float] = None,
+    nota_distancia: Optional[float] = None,
+) -> Campo:
+    campo = Campo(
+        nome=nome, cidade=cidade,
+        nota_qualidade=nota_qualidade, nota_distancia=nota_distancia,
+    )
     session.add(campo)
     session.flush()
     return campo
+
+
+def reatribuir_campo_jogos(session: Session, de_id: int, para_id: int) -> None:
+    """Move todos os jogos do campo `de_id` para `para_id` (usado na fusão)."""
+    for jogo in session.scalars(select(Jogo).where(Jogo.campo_id == de_id)):
+        jogo.campo_id = para_id
+    session.flush()
+
+
+def excluir_campo(session: Session, campo_id: int) -> None:
+    campo = session.get(Campo, campo_id)
+    if campo:
+        session.delete(campo)
+
+
+def reatribuir_adversario_jogos(session: Session, de_id: int, para_id: int) -> None:
+    """Move todos os jogos do adversário `de_id` para `para_id` (fusão)."""
+    for jogo in session.scalars(select(Jogo).where(Jogo.adversario_id == de_id)):
+        jogo.adversario_id = para_id
+    session.flush()
+
+
+def excluir_adversario(session: Session, adversario_id: int) -> None:
+    adv = session.get(Adversario, adversario_id)
+    if adv:
+        session.delete(adv)
 
 
 # ------------------------------- Jogos -------------------------------
@@ -123,6 +178,13 @@ def listar_jogos(session: Session) -> list[Jogo]:
 
 def obter_jogo(session: Session, jogo_id: int) -> Optional[Jogo]:
     return session.get(Jogo, jogo_id)
+
+
+def definir_capitao(session: Session, jogo_id: int, jogador_id: Optional[int]) -> None:
+    """Define (ou limpa, com None) o capitão de um jogo."""
+    jogo = session.get(Jogo, jogo_id)
+    if jogo:
+        jogo.capitao_id = jogador_id
 
 
 def existe_jogo_na_data(

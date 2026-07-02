@@ -136,9 +136,23 @@ with col_acao:
         nomes = ", ".join(apelido_por_id[aid] for aid in duplicados)
         st.warning(f"Atleta em mais de uma posição: **{nomes}**. Ajuste antes de salvar.")
 
+    # ── Capitão do jogo (per-jogo, não per-momento) ──────────────────────────
+    cap_atual = escalacao_jogo.obter_capitao(jogo.id) or 0
+    opcoes_cap = [0] + sorted(set(escolhidos) | ({cap_atual} if cap_atual else set()))
+    cap_idx = opcoes_cap.index(cap_atual) if cap_atual in opcoes_cap else 0
+    capitao_sel = st.selectbox(
+        "Capitão do jogo",
+        opcoes_cap,
+        index=cap_idx,
+        format_func=lambda aid: "— sem capitão —" if aid == 0 else apelido_por_id.get(aid, "?"),
+        key=f"cap_{jogo.id}",
+    )
+
     if st.button("💾 Salvar escalação", type="primary", disabled=bool(duplicados)):
         qtd = escalacao_jogo.salvar(jogo.id, momento, formacao, atribuicoes)
+        escalacao_jogo.definir_capitao(jogo.id, capitao_sel or None)
+        cap_txt = f" · capitão: {apelido_por_id.get(capitao_sel)}" if capitao_sel else ""
         st.success(
             f"Escalação salva — {qtd} jogadores ({momento_label}) "
-            f"em {jogo.rotulo()}."
+            f"em {jogo.rotulo()}.{cap_txt}"
         )

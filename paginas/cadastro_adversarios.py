@@ -3,13 +3,17 @@ import streamlit as st
 
 from src.auth.senha import exigir_senha
 from src.servicos import cadastros
+from src.servicos import organizacao
+from paginas._mesclar import secao_mesclar
 
 st.title("🛡️ Adversários")
 
 if not exigir_senha():
     st.stop()
 
-aba_novo, aba_editar = st.tabs(["➕ Novo adversário", "✏️ Editar / listar"])
+aba_novo, aba_editar, aba_mesclar = st.tabs(
+    ["➕ Novo adversário", "✏️ Editar / listar", "🧹 Mesclar duplicados"]
+)
 
 with aba_novo:
     with st.form("novo_adversario", clear_on_submit=True):
@@ -47,3 +51,10 @@ with aba_editar:
                 st.rerun()
             except ValueError as e:
                 st.error(str(e))
+
+with aba_mesclar:
+    secao_mesclar(
+        entidade="adversarios",
+        sugerir=organizacao.sugerir_duplicados_adversarios,
+        fundir=organizacao.fundir_adversarios,
+    )

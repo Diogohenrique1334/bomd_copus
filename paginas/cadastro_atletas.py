@@ -38,10 +38,15 @@ with aba_novo:
         c3, c4 = st.columns(2)
         rg = c3.text_input("RG")
         celular = c4.text_input("Celular")
-        nascimento = st.date_input(
+        c5, c6 = st.columns(2)
+        papel = c5.selectbox("Papel", cadastros.PAPEIS,
+                             help="Diretor e Capitão podem votar nas avaliações.")
+        nascimento = c6.date_input(
             "Data de nascimento", value=None,
             min_value=_NASC_MIN, max_value=date.today(), format="DD/MM/YYYY",
         )
+        foto = st.file_uploader("Foto (para a arte do melhor em campo)",
+                                type=["png", "jpg", "jpeg"])
         if st.form_submit_button("Cadastrar atleta", type="primary"):
             try:
                 cadastros.criar_atleta(
@@ -51,6 +56,8 @@ with aba_novo:
                     celular=celular or None,
                     posicao=posicao or None,
                     data_nascimento=nascimento,
+                    papel=papel,
+                    foto=foto.getvalue() if foto else None,
                 )
                 st.success(f"Atleta '{nome.strip()}' cadastrado!")
             except ValueError as e:
@@ -69,8 +76,10 @@ with aba_editar:
                 "Nome": a.nome,
                 "Apelido": a.apelido or "",
                 "Posição": a.posicao or "",
+                "Papel": a.papel,
                 "Idade": _idade(a.data_nascimento),
                 "Celular": a.celular or "",
+                "Foto": "📷" if a.foto else "",
                 "Ativo": "Sim" if a.ativo else "Não",
             }
             for a in atletas
@@ -82,6 +91,9 @@ with aba_editar:
     alvo = st.selectbox(
         "Editar atleta", atletas, format_func=lambda a: a.nome, key="edit_atleta"
     )
+    if alvo.foto:
+        st.image(alvo.foto, width=120, caption="Foto atual")
+
     with st.form("editar_atleta"):
         nome = st.text_input("Nome *", value=alvo.nome)
         c1, c2 = st.columns(2)
@@ -91,10 +103,16 @@ with aba_editar:
         c3, c4 = st.columns(2)
         rg = c3.text_input("RG", value=alvo.rg or "")
         celular = c4.text_input("Celular", value=alvo.celular or "")
-        nascimento = st.date_input(
+        c5, c6 = st.columns(2)
+        papel_idx = cadastros.PAPEIS.index(alvo.papel) if alvo.papel in cadastros.PAPEIS else 0
+        papel = c5.selectbox("Papel", cadastros.PAPEIS, index=papel_idx,
+                             help="Diretor e Capitão podem votar nas avaliações.")
+        nascimento = c6.date_input(
             "Data de nascimento", value=alvo.data_nascimento,
             min_value=_NASC_MIN, max_value=date.today(), format="DD/MM/YYYY",
         )
+        nova_foto = st.file_uploader("Trocar foto (deixe vazio para manter a atual)",
+                                     type=["png", "jpg", "jpeg"])
         ativo = st.checkbox("Ativo", value=alvo.ativo)
         if st.form_submit_button("Salvar alterações", type="primary"):
             try:
@@ -107,6 +125,9 @@ with aba_editar:
                     posicao=posicao or None,
                     ativo=ativo,
                     data_nascimento=nascimento,
+                    papel=papel,
+                    foto=nova_foto.getvalue() if nova_foto else None,
+                    atualizar_foto=nova_foto is not None,
                 )
                 st.success("Atleta atualizado!")
                 st.rerun()

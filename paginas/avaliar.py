@@ -12,12 +12,29 @@ st.title("⭐ Avaliar jogadores")
 if not exigir_senha():
     st.stop()
 
+
+def _exib(jogador) -> str:
+    """Nome de exibição do atleta: apelido quando houver, senão o nome."""
+    return jogador.apelido or jogador.nome
+
+
 jogos = listar_jogos_resumo(limite=2)
 if not jogos:
     st.warning("Cadastre um jogo antes de avaliar (página **Registrar jogo**).")
     st.stop()
 
-votante = st.text_input("Quem está votando?")
+# Votante vem da lista de aptos (Diretores e Capitães, inclusive inativos).
+votantes = cadastros.listar_votantes()
+if not votantes:
+    st.warning(
+        "Nenhum votante cadastrado. Marque atletas como **Diretor** ou **Capitão** "
+        "na página **Atletas** para liberar a votação."
+    )
+    st.stop()
+
+votante_obj = st.selectbox("Quem está votando?", votantes, format_func=_exib)
+votante = _exib(votante_obj)
+
 jogo = st.selectbox(
     "Jogo (apenas os 2 mais recentes)",
     jogos,
@@ -30,17 +47,27 @@ ativos = cadastros.listar_atletas(apenas_ativos=True)
 escalados = escalacao_jogo.atletas_do_jogo(jogo.id)
 if escalados:
     jogadores = [a for a in ativos if a.id in escalados]
-    st.caption(f"Notas de 0 a 10 (passo 0,5). {len(jogadores)} atletas da escalação deste jogo.")
+    base_msg = f"{len(jogadores)} atletas da escalação deste jogo."
 else:
     jogadores = ativos
-    st.caption("Notas de 0 a 10 (passo 0,5). Sem escalação salva — listando todos os "
-               "atletas ativos. Desmarque quem não jogou.")
+    base_msg = ("Sem escalação salva — listando todos os atletas ativos. "
+                "Desmarque quem não jogou.")
+
+# Auto-voto: quem está votando não avalia a si mesmo.
+jogadores = [j for j in jogadores if j.id != votante_obj.id]
+st.caption(f"Notas de 0 a 10 (passo 0,5). {base_msg}")
 
 with st.form("form_avaliacoes"):
+    nota_adversario = st.slider(
+        "Nota do time adversário", min_value=0.0, max_value=10.0, step=0.5,
+        value=7.0, help="Sua avaliação de quão forte foi o adversário neste jogo.",
+    )
+    st.divider()
+
     notas: dict[int, float | None] = {}
     for jogador in jogadores:
         c_nome, c_jogou, c_nota = st.columns([3, 1, 3])
-        c_nome.markdown(f"**{jogador.nome}**")
+        c_nome.markdown(f"**{_exib(jogador)}**")
         jogou = c_jogou.checkbox("Jogou", value=True, key=f"jogou_{jogador.id}")
         nota = c_nota.slider(
             "Nota",
@@ -59,8 +86,9 @@ with st.form("form_avaliacoes"):
 if enviado:
     try:
         qtd = avaliacoes.registrar_avaliacoes(
-            jogo_id=jogo.id, votante=votante, notas=notas
+            jogo_id=jogo.id, votante=votante, notas=notas,
+            nota_adversario=nota_adversario,
         )
-        st.success(f"{qtd} avaliações registradas. Valeu, {votante.strip()}! 👏")
+        st.success(f"{qtd} avaliações registradas. Valeu, {votante}! 👏")
     except ValueError as e:
         st.error(str(e))

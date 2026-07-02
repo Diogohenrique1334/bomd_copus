@@ -24,6 +24,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    LargeBinary,
     String,
     UniqueConstraint,
     func,
@@ -49,6 +50,11 @@ class Jogador(Base):
     # False para entradas auxiliares (ex.: "Gol Contra", "Gol sem assistência"),
     # usadas só p/ registrar gols/assistências — não são atletas de verdade.
     eh_atleta: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Hierarquia no grupo: 'Comum' | 'Diretor' | 'Capitao'. Só Diretor e Capitão
+    # podem votar nas avaliações (ver cadastros.listar_votantes).
+    papel: Mapped[str] = mapped_column(String(20), default="Comum", nullable=False)
+    # Foto do atleta (bytes) usada na arte "Melhor em Campo" pro Instagram.
+    foto: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
 
     avaliacoes: Mapped[List["Avaliacao"]] = relationship(back_populates="jogador")
     gols: Mapped[List["Gol"]] = relationship(
@@ -73,6 +79,9 @@ class Campo(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     nome: Mapped[str] = mapped_column(String(80), nullable=False)
     cidade: Mapped[Optional[str]] = mapped_column(String(80))
+    # Notas dadas pelos administradores no próprio cadastro (0–10).
+    nota_qualidade: Mapped[Optional[float]] = mapped_column(Float)
+    nota_distancia: Mapped[Optional[float]] = mapped_column(Float)
 
     jogos: Mapped[List["Jogo"]] = relationship(back_populates="campo")
 
@@ -89,11 +98,17 @@ class Jogo(Base):
     casa: Mapped[Optional[bool]] = mapped_column(Boolean)   # True=jogo em casa, False=fora
     gols_bdc: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     gols_adversario: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Capitão designado para este jogo (escolhido na tela de Escalação do jogo).
+    capitao_id: Mapped[Optional[int]] = mapped_column(ForeignKey("jogadores.id"))
     criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     adversario: Mapped[Optional["Adversario"]] = relationship(back_populates="jogos")
     campo: Mapped[Optional["Campo"]] = relationship(back_populates="jogos")
+    capitao: Mapped[Optional["Jogador"]] = relationship(foreign_keys=[capitao_id])
     avaliacoes: Mapped[List["Avaliacao"]] = relationship(
+        back_populates="jogo", cascade="all, delete-orphan"
+    )
+    avaliacoes_adversario: Mapped[List["AvaliacaoAdversario"]] = relationship(
         back_populates="jogo", cascade="all, delete-orphan"
     )
     gols: Mapped[List["Gol"]] = relationship(
@@ -120,6 +135,27 @@ class Avaliacao(Base):
 
     jogo: Mapped["Jogo"] = relationship(back_populates="avaliacoes")
     jogador: Mapped["Jogador"] = relationship(back_populates="avaliacoes")
+
+
+class AvaliacaoAdversario(Base):
+    """Nota que um votante dá ao time adversário de um jogo (0–10).
+
+    Coletada junto com as avaliações dos jogadores (mesma tela). Única por
+    (jogo, votante): reenviar do mesmo votante substitui o voto anterior,
+    espelhando o comportamento de ``Avaliacao``.
+    """
+    __tablename__ = "avaliacoes_adversario"
+    __table_args__ = (
+        UniqueConstraint("jogo_id", "votante", name="uq_voto_adversario"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    jogo_id: Mapped[int] = mapped_column(ForeignKey("jogos.id"), nullable=False)
+    votante: Mapped[str] = mapped_column(String(80), nullable=False)
+    nota: Mapped[float] = mapped_column(Float, nullable=False)   # 0.0–10.0
+    criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    jogo: Mapped["Jogo"] = relationship(back_populates="avaliacoes_adversario")
 
 
 class Gol(Base):
